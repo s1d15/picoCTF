@@ -1,2 +1,3 @@
 *.txt
 *.gdb_history
+python3.12/
