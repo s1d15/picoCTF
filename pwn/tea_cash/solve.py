@@ -1,6 +1,7 @@
 from pwn import *
 
-HOST, PORT = '127.0.0.1', 31337
+# HOST, PORT = '127.0.0.1', 31337
+HOST, PORT = 'candy-mountain.picoctf.net', 53838
 r = remote(HOST, PORT)
 
 r.recvuntil('-> ')
