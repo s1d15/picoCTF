@@ -1,3 +1,4 @@
 *.txt
 *.gdb_history
 python3.12/
+/home/sidis/ctf/picoctf/pwn/kit_engine/source
