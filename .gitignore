@@ -1,4 +1,5 @@
 *.txt
 *.gdb_history
 python3.12/
-pwn/kit_engine/source
+source
+d8
